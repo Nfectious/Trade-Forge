@@ -13,10 +13,10 @@ ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 
 # Copy package files
 COPY package*.json ./
-COPY yarn.lock* ./
+# Remove or comment out the yarn.lock line
+# COPY yarn.lock* ./   ← delete or comment this
 
-# Install dependencies
-RUN npm ci || yarn install --frozen-lockfile
+RUN npm install
 
 # Copy source code
 COPY . .
