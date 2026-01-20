@@ -1,122 +1,80 @@
-import { LivePrice } from '../components/LivePrice';
-import { usePriceStream } from '../hooks/usePriceStream';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import Image from 'next/image';
+import { LucideIcon } from '@lucide-react';
 
-export default function Trading() {
-  const { prices, isConnected, getPrice } = usePriceStream();
+const Trading = () => {
+  const router = useRouter();
+  const [user, setUser] = useState({});
+  const [assets, setAssets] = useState([]);
+  const [prices, setPrices] = useState({});
 
-  // Get specific prices for display
-  const btcPrice = getPrice('binance', 'BTCUSDT');
-  const ethPrice = getPrice('binance', 'ETHUSDT');
-  const solPrice = getPrice('binance', 'SOLUSDT');
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+    } else {
+      axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(response => setUser(response.data))
+      .catch(() => router.push('/login'));
+
+      axios.get(`${process.env.NEXT_PUBLIC_API_URL}/portfolio`)
+      .then(response => setAssets(response.data.assets))
+      .catch(error => console.error('Error fetching portfolio:', error));
+
+      axios.get(`${process.env.NEXT_PUBLIC_API_URL}/market/prices?symbols=BTC,ETH,SOL`)
+      .then(response => setPrices(response.data))
+      .catch(error => console.error('Error fetching market prices:', error));
+    }
+  }, []);
+
+  const handleOrder = (symbol, type, quantity, price) => {
+    axios.post(`${process.env.NEXT_PUBLIC_API_URL}/trading/order`, { symbol, type, quantity, price })
+      .then(response => console.log('Order:', response.data))
+      .catch(error => console.error('Error placing order:', error));
+  };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Header with connection status */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Trading Simulator</h1>
-          <div className="flex items-center gap-3">
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-              isConnected 
-                ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                : 'bg-red-500/20 text-red-400 border border-red-500/50'
-            }`}>
-              {isConnected ? '🟢 Live Data' : '🔴 Disconnected'}
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-900 text-white p-4">
+      <Head>
+        <title>Crypto Trading Simulator</title>
+        <meta name="description" content="A professional crypto paper trading simulator" />
+      </Head>
+
+      <main className="container mx-auto px-4">
+        <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
+        <div className="mb-4">
+          <p>Your balance: ${user.balance_usd}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Live Price Cards */}
-          <div className="lg:col-span-1 space-y-4">
-            <LivePrice symbol="BTCUSDT" exchanges={['binance', 'bybit', 'kraken']} />
-            <LivePrice symbol="ETHUSDT" exchanges={['binance', 'bybit']} />
-            <LivePrice symbol="SOLUSDT" exchanges={['binance']} />
-          </div>
+        <section>
+          <h2 className="text-xl font-bold mb-2">Portfolio</h2>
+          {assets.map(asset => (
+            <div key={asset.symbol} className="mb-4 p-2 bg-gray-800 rounded flex justify-between items-center">
+              <span>{asset.symbol}: {asset.quantity}</span>
+              <span>${asset.current_value}</span>
+              <button onClick={() => handleOrder(asset.symbol, 'sell', asset.quantity)} className="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded">Sell All</button>
+            </div>
+          ))}
+        </section>
 
-          {/* Trading Chart Area */}
-          <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-white mb-4">Price Chart</h2>
-            
-            {/* Quick price display */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-sm text-gray-400">BTC/USDT</div>
-                <div className="text-2xl font-bold text-white">
-                  ${btcPrice?.toLocaleString() || '---'}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-400">ETH/USDT</div>
-                <div className="text-2xl font-bold text-white">
-                  ${ethPrice?.toLocaleString() || '---'}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-sm text-gray-400">SOL/USDT</div>
-                <div className="text-2xl font-bold text-white">
-                  ${solPrice?.toLocaleString() || '---'}
-                </div>
-              </div>
+        <section>
+          <h2 className="text-xl font-bold mb-2">Market Prices</h2>
+          {Object.entries(prices).map(([symbol, priceData]) => (
+            <div key={symbol} className="mb-4 p-2 bg-gray-800 rounded flex justify-between items-center">
+              <span>{symbol}: ${priceData.price}</span>
+              <span>{priceData.change_24h}%</span>
+              <button onClick={() => handleOrder(symbol, 'buy', 1)} className="ml-2 bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded">Buy 1 {symbol}</button>
             </div>
-
-            {/* Placeholder for TradingView chart */}
-            <div className="bg-gray-900 rounded-lg h-96 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <div className="text-4xl mb-2">📊</div>
-                <div>TradingView Chart Widget</div>
-                <div className="text-sm mt-2">Integration coming soon</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Trading Controls */}
-        <div className="mt-6 bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 className="text-xl font-semibold text-white mb-4">Execute Trade</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Symbol</label>
-              <select className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white">
-                <option>BTC/USDT</option>
-                <option>ETH/USDT</option>
-                <option>SOL/USDT</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Type</label>
-              <select className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white">
-                <option>Market</option>
-                <option>Limit</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Amount</label>
-              <input 
-                type="number" 
-                placeholder="0.00"
-                className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white"
-              />
-            </div>
-            
-            <div className="flex items-end gap-2">
-              <button className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium">
-                Buy
-              </button>
-              <button className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium">
-                Sell
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
+          ))}
+        </section>
+      </main>
     </div>
   );
-}
+};
+
+export default Trading;
