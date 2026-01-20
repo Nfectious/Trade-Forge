@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env.production          # ← This line is key. Points to root .env.production
+    # volumes, restart, etc.
+
+  # If frontend needs env vars (NEXT_PUBLIC_*) too:
+  frontend:
+    ...
+    env_file:
+      - .env.production
