@@ -1,13 +1,10 @@
-version: '3.9'  # ← You can keep it or remove it (modern Compose ignores it)
-
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: crypto_db
     restart: unless-stopped
     env_file:
-      - .env.production           # ← ADDED: loads your env file
+      - .env.production
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -27,15 +24,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s           # ← ADDED: gives Postgres time to boot first run
+      start_period: 30s  # Gives extra time for first init
 
-  # Redis
   redis:
     image: redis:7-alpine
     container_name: crypto_redis
     restart: unless-stopped
     env_file:
-      - .env.production           # ← ADDED
+      - .env.production
     command: redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
@@ -48,9 +44,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s           # ← ADDED: grace period
+      start_period: 10s
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
@@ -58,7 +53,7 @@ services:
     container_name: crypto_backend
     restart: unless-stopped
     env_file:
-      - .env.production           # ← ADDED (this was probably missing)
+      - .env.production
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
@@ -96,7 +91,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # Next.js/React Frontend
   frontend:
     build:
       context: ./frontend
