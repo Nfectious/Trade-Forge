@@ -1,8 +1,5 @@
 import { usePriceStream } from '../hooks/usePriceStream';
 
-/**
- * Scrolling price ticker for navbar/header
- */
 export const PriceTicker = () => {
   const { prices } = usePriceStream();
 
