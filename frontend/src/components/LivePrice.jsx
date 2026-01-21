@@ -1,10 +1,6 @@
 import { usePriceStream } from '../hooks/usePriceStream';
 
-/**
- * Component to display live crypto prices
- * Shows price from multiple exchanges with real-time updates
- */
-export const LivePrice = ({ symbol = 'BTCUSDT', exchanges = ['binance', 'bybit'] }) => {
+export const LivePrice = ({ symbol = 'BTCUSDT', exchanges = ['binance', 'bybit', 'kraken'] }) => {
   const { prices, isConnected } = usePriceStream();
 
   const formatPrice = (price) => {
