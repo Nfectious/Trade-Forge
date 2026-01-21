@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { useState, useEffect } from 'react';
+import { LivePrice } from '@/components/LivePrice';
+import { PriceTicker } from '@/components/PriceTicker';
+import { usePriceStream } from '@/hooks/usePriceStream';import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { usePriceStream } from '../hooks/usePriceStream';
 import LivePrice from '../components/LivePrice';
 
 const Trading = () => {
