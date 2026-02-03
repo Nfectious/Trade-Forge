@@ -3,7 +3,7 @@ Trading API routes
 Portfolio viewing, order placement, and trade history.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from datetime import datetime, UTC
@@ -14,6 +14,7 @@ import logging
 from app.core.database import get_session
 from app.core.dependencies import get_current_user
 from app.core.redis import get_redis_client
+from app.core.security import limiter
 from app.models.user import User
 from app.models.portfolio import Portfolio, PortfolioHolding
 from app.models.trade import (
@@ -57,7 +58,9 @@ async def get_price(symbol: str) -> Decimal | None:
 # ============================================================================
 
 @router.get("/portfolio")
+@limiter.limit("60/minute")
 async def get_portfolio(
+    request: Request,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -124,7 +127,9 @@ async def get_portfolio(
 # ============================================================================
 
 @router.post("/order", response_model=OrderResponse)
+@limiter.limit("30/minute")
 async def place_order(
+    request: Request,
     order: OrderCreate,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -270,7 +275,9 @@ async def place_order(
 # ============================================================================
 
 @router.get("/trades/history")
+@limiter.limit("60/minute")
 async def get_trade_history(
+    request: Request,
     limit: int = 10,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),

@@ -21,6 +21,7 @@ class APIClient {
     this.client = axios.create({
       baseURL: API_BASE_URL,
       timeout: 30000, // 30 seconds
+      withCredentials: true, // send httpOnly cookies on every request
       headers: {
         'Content-Type': 'application/json'
       }
@@ -87,31 +88,19 @@ class APIClient {
   }
 
   /**
-   * Get refresh token from localStorage
-   */
-  private getRefreshToken(): string | null {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem('refresh_token')
-  }
-
-  /**
-   * Refresh access token using refresh token
+   * Refresh access token using httpOnly cookie.
+   * The refresh_token cookie is sent automatically by the browser.
    */
   private async refreshAccessToken(): Promise<string | null> {
-    const refreshToken = this.getRefreshToken()
-    
-    if (!refreshToken) {
-      this.handleAuthFailure()
-      return null
-    }
-
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-        refresh_token: refreshToken
-      })
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      )
 
       const newAccessToken = response.data.access_token
-      
+
       if (newAccessToken) {
         localStorage.setItem('access_token', newAccessToken)
         return newAccessToken
@@ -132,7 +121,7 @@ class APIClient {
     if (typeof window === 'undefined') return
 
     localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    // refresh_token is in httpOnly cookie, cleared server-side on logout
     
     // Redirect to login if not already there
     if (window.location.pathname !== '/login') {
@@ -152,7 +141,7 @@ class APIClient {
    */
   public logout(): void {
     localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    // refresh_token is in httpOnly cookie, cleared server-side on logout
     window.location.href = '/login'
   }
 

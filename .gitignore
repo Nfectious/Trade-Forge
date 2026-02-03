@@ -1,6 +1,7 @@
-# Environment files (contain secrets)
+# Environment files (contain secrets — DB passwords, JWT keys, SMTP creds)
 .env
 .env.*
+.env.production
 !.env.example
 
 # Python
@@ -16,6 +17,9 @@ node_modules/
 .next/
 out/
 
+# Logs
+*.log
+
 # IDE
 .vscode/
 .idea/
@@ -26,5 +30,8 @@ out/
 .DS_Store
 Thumbs.db
 
-# Docker volumes
+# Docker
+docker-compose.override.yml
+
+# Database backups (may contain user data)
 database/backups/*.sql

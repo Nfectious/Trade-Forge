@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to fetch user:', error);
       setUser(null);
       localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // refresh_token is in httpOnly cookie, not in localStorage
     }
   };
 

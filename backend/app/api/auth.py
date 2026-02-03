@@ -3,10 +3,14 @@ Authentication API routes
 Handles user registration, login, token refresh, and email verification
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from datetime import datetime, timedelta, UTC
+
+logger = logging.getLogger(__name__)
 
 from app.core.database import get_session
 from app.core.security import (
@@ -116,10 +120,8 @@ async def register(
     session.add(token_record)
     await session.commit()
     
-    # TODO: Send verification email (email service to be implemented)
-    # For now, just log the token
-    print(f"Verification token for {new_user.email}: {verification_token}")
-    print(f"Verification link: {settings.FRONTEND_URL}/verify?token={verification_token}")
+    # TODO: Send verification email via aiosmtplib (email service to be implemented)
+    logger.debug("Verification token generated for user_id=%s", new_user.id)
     
     return new_user
 
@@ -252,17 +254,25 @@ async def verify_email(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_access_token(
-    refresh_token: str,
+    request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Refresh access token using refresh token
-    
-    - Validates refresh token
+    Refresh access token using refresh token from httpOnly cookie.
+
+    - Reads refresh_token from cookie (not request body)
+    - Validates and rotates the token
     - Issues new access token
-    - Rotates refresh token
     """
+    # Read refresh token from httpOnly cookie
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No refresh token provided"
+        )
+
     # Decode refresh token
     try:
         payload = decode_token(refresh_token)

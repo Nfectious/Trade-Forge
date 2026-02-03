@@ -1,7 +1,7 @@
 # backend/app/api/admin.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, func
 from app.core.dependencies import require_admin
 from app.core.database import get_session
 from app.models.user import User, UserResponse
@@ -26,6 +26,14 @@ async def ban_user(
     admin: User = Depends(require_admin)
 ):
     """Ban a user (admin only)"""
+    # Prevent banning the last admin
+    if str(admin.id) == user_id:
+        admin_count = await session.execute(
+            select(func.count()).select_from(User).where(User.role == "admin")
+        )
+        if admin_count.scalar() <= 1:
+            raise HTTPException(400, "Cannot ban the last admin account")
+
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(404, "User not found")

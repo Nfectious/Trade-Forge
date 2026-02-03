@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.core.config import settings
-from app.core.security import limiter
+from app.core.security import limiter, get_security_headers
 from app.core.database import close_db
 from app.core.redis import init_redis, get_redis_client, close_redis
 from app.core.websocket_manager import WebSocketManager
@@ -117,9 +117,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for key, value in get_security_headers().items():
+        response.headers[key] = value
+    return response
+
 
 # ============================================================================
 # EXCEPTION HANDLERS
