@@ -195,6 +195,9 @@ class APIClient {
 // Export singleton instance
 export const apiClient = new APIClient()
 
+// Alias used by auth.tsx
+export const api = apiClient
+
 /**
  * API response types
  */

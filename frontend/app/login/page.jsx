@@ -1,8 +1,10 @@
-import axios from 'axios';
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
+import { api } from '../../lib/api';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -18,7 +20,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('JWT')) {
+    if (localStorage.getItem('access_token')) {
       router.push('/dashboard');
     }
   }, [router]);
@@ -28,8 +30,8 @@ const Login = () => {
     try {
       loginSchema.parse({ email, password });
       setLoading(true);
-      const response = await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/login', { email, password });
-      localStorage.setItem('JWT', response.data.token);
+      const response = await api.post('/auth/login', { email, password });
+      localStorage.setItem('access_token', response.data.access_token);
       router.push('/dashboard');
     } catch (err) {
       setError(err.errors?.[0]?.message || err.message);

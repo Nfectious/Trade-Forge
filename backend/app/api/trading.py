@@ -8,9 +8,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from datetime import datetime, UTC
 from decimal import Decimal
+import json
+import logging
 
 from app.core.database import get_session
 from app.core.dependencies import get_current_user
+from app.core.redis import get_redis_client
 from app.models.user import User
 from app.models.portfolio import Portfolio, PortfolioHolding
 from app.models.trade import (
@@ -18,14 +21,35 @@ from app.models.trade import (
     OrderCreate, OrderResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
-# Mock prices for MVP - replaced by Redis/WebSocket feed later
-MOCK_PRICES = {
+# Fallback prices when Redis is unavailable
+FALLBACK_PRICES = {
     "BTCUSDT": Decimal("65000.00"),
     "ETHUSDT": Decimal("3200.00"),
     "SOLUSDT": Decimal("180.00"),
 }
+
+
+async def get_price(symbol: str) -> Decimal | None:
+    """Get price from Redis cache, fall back to static prices."""
+    redis = get_redis_client()
+    if redis:
+        for exchange in ("binance", "bybit", "kraken"):
+            key = f"price:{exchange}:{symbol}"
+            try:
+                data = await redis.get(key)
+                if data:
+                    parsed = json.loads(data)
+                    price = parsed.get("price") or parsed.get("p")
+                    if price:
+                        return Decimal(str(price))
+            except Exception as e:
+                logger.debug(f"Redis price lookup failed for {key}: {e}")
+
+    return FALLBACK_PRICES.get(symbol)
 
 
 # ============================================================================
@@ -64,7 +88,7 @@ async def get_portfolio(
     holdings_value = Decimal("0")
 
     for holding, symbol in rows:
-        current_price = MOCK_PRICES.get(symbol.upper(), Decimal("0"))
+        current_price = await get_price(symbol.upper()) or Decimal("0")
         current_value = Decimal(str(holding.quantity)) * current_price
         cost_basis = Decimal(str(holding.quantity)) * Decimal(str(holding.avg_entry_price))
 
@@ -110,10 +134,13 @@ async def place_order(
         raise HTTPException(status_code=400, detail="Side must be 'buy' or 'sell'")
 
     symbol = order.symbol.upper()
-    if symbol not in MOCK_PRICES:
-        raise HTTPException(status_code=400, detail=f"Unsupported symbol: {symbol}")
 
-    executed_price = MOCK_PRICES[symbol]
+    # Get price from Redis cache or fallback
+    live_price = await get_price(symbol)
+    if live_price is None:
+        raise HTTPException(status_code=400, detail=f"No price available for: {symbol}")
+
+    executed_price = live_price
     if order.price is not None:
         executed_price = Decimal(str(order.price))
 
@@ -137,9 +164,13 @@ async def place_order(
         session.add(trading_pair)
         await session.flush()
 
-    # Get portfolio
+    # Get portfolio WITH ROW LOCK to prevent race condition (TOCTOU).
+    # Two concurrent buys both reading the same balance would both pass
+    # the check and overdraw. FOR UPDATE blocks the second until the first commits.
     result = await session.execute(
-        select(Portfolio).where(Portfolio.user_id == current_user.id)
+        select(Portfolio)
+        .where(Portfolio.user_id == current_user.id)
+        .with_for_update()
     )
     portfolio = result.scalar_one_or_none()
 
@@ -149,12 +180,14 @@ async def place_order(
     # cash_balance is in cents
     total_cost_cents = int(total_cost * 100)
 
-    # Get existing holding for this pair
+    # Get existing holding WITH ROW LOCK
     result = await session.execute(
-        select(PortfolioHolding).where(
+        select(PortfolioHolding)
+        .where(
             PortfolioHolding.user_id == current_user.id,
             PortfolioHolding.trading_pair_id == trading_pair.id,
         )
+        .with_for_update()
     )
     holding = result.scalar_one_or_none()
 
