@@ -60,12 +60,12 @@ class Settings(BaseSettings):
             raise ValueError("Either JWT_SECRET or JWT_SECRET_KEY must be set")
         return secret
 
-    # Email Configuration
-    SMTP_HOST: str
+    # Email Configuration (optional until email service is implemented)
+    SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
-    SMTP_USER: str
-    SMTP_PASSWORD: str
-    SMTP_FROM: str
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM: str | None = None
 
     # Stripe Payments (Optional - use restricted key for security)
     STRIPE_RESTRICTED_KEY: str | None = None

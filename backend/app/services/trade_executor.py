@@ -17,12 +17,12 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
-from ..models.trade import Trade, TradeStatus, TradeSide
-from ..models.portfolio import Portfolio, PortfolioHolding
-from ..models.wallet import WalletTransaction, TransactionType
-from ..core.config import settings
-from ..core.database import get_db
-from ..core.redis import get_redis
+from app.models.trade import Trade, TradeStatus, TradeSide
+from app.models.portfolio import Portfolio, PortfolioHolding
+from app.models.wallet import WalletTransaction, TransactionType
+from app.core.config import settings
+from app.core.database import get_session
+from app.core.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -390,9 +390,9 @@ async def get_trade_executor(
     """Factory function for dependency injection"""
     
     if db is None:
-        db = await get_db().__anext__()
-    
+        db = await get_session().__anext__()
+
     if redis is None:
-        redis = await get_redis()
-    
+        redis = get_redis_client()
+
     return TradeExecutor(db, redis)

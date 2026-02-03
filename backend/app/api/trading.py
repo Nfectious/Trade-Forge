@@ -1,192 +1,269 @@
-# backend/app/api/trading.py
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
-from typing import List
-from pydantic import BaseModel
-from datetime import datetime
+"""
+Trading API routes
+Portfolio viewing, order placement, and trade history.
+"""
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
+from datetime import datetime, UTC
 from decimal import Decimal
-from .models import User, Portfolio, Trade
-from .dependencies import get_current_user, get_db
 
-router = APIRouter(prefix="/trading", tags=["trading"])
+from app.core.database import get_session
+from app.core.dependencies import get_current_user
+from app.models.user import User
+from app.models.portfolio import Portfolio, PortfolioHolding
+from app.models.trade import (
+    TradingPair, Order, Trade,
+    OrderCreate, OrderResponse,
+)
 
-# Mock prices for MVP – later replace with real feed via WebSocket or external API
+router = APIRouter()
+
+# Mock prices for MVP - replaced by Redis/WebSocket feed later
 MOCK_PRICES = {
-    "BTC": Decimal("65000.00"),
-    "ETH": Decimal("3200.00"),
-    "SOL": Decimal("180.00"),
+    "BTCUSDT": Decimal("65000.00"),
+    "ETHUSDT": Decimal("3200.00"),
+    "SOLUSDT": Decimal("180.00"),
 }
 
-class PortfolioAsset(BaseModel):
-    symbol: str
-    quantity: float
-    avg_price: float
-    current_price: float
-    current_value: float
-    pnl_percent: float
 
-class PortfolioResponse(BaseModel):
-    assets: List[PortfolioAsset]
-    total_value: float
-    updated_at: datetime
+# ============================================================================
+# PORTFOLIO
+# ============================================================================
 
-class OrderCreate(BaseModel):
-    symbol: str
-    type: str  # "buy" or "sell"
-    quantity: float
-    price: float | None = None  # None = market order
-
-class OrderResponse(BaseModel):
-    success: bool
-    message: str
-    trade_id: int | None = None
-
-@router.get("/portfolio", response_model=PortfolioResponse)
-def get_portfolio(
+@router.get("/portfolio")
+async def get_portfolio(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_session),
 ):
-    """Get user's portfolio with calculated current value and PNL %."""
-    portfolios = db.query(Portfolio).filter(Portfolio.user_id == current_user.id).all()
+    """Get user's portfolio with current holdings and P&L."""
+    # Get portfolio (cash balance)
+    result = await session.execute(
+        select(Portfolio).where(Portfolio.user_id == current_user.id)
+    )
+    portfolio = result.scalar_one_or_none()
 
-    if not portfolios:
-        return PortfolioResponse(assets=[], total_value=0.0, updated_at=datetime.utcnow())
+    if not portfolio:
+        return {
+            "cash_balance": 0,
+            "assets": [],
+            "total_value": 0,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+
+    # Get holdings joined with trading pair for symbol
+    result = await session.execute(
+        select(PortfolioHolding, TradingPair.symbol)
+        .join(TradingPair, PortfolioHolding.trading_pair_id == TradingPair.id)
+        .where(PortfolioHolding.user_id == current_user.id)
+    )
+    rows = result.all()
 
     assets = []
-    total_value = Decimal("0")
+    holdings_value = Decimal("0")
 
-    for p in portfolios:
-        current_price = MOCK_PRICES.get(p.asset_symbol.upper(), Decimal("0"))
-        current_value = p.quantity * current_price
-        cost_basis = p.quantity * p.avg_buy_price
+    for holding, symbol in rows:
+        current_price = MOCK_PRICES.get(symbol.upper(), Decimal("0"))
+        current_value = Decimal(str(holding.quantity)) * current_price
+        cost_basis = Decimal(str(holding.quantity)) * Decimal(str(holding.avg_entry_price))
 
         pnl_percent = Decimal("0")
         if cost_basis != 0:
             pnl_percent = ((current_value - cost_basis) / cost_basis) * Decimal("100")
 
-        assets.append(PortfolioAsset(
-            symbol=p.asset_symbol,
-            quantity=float(p.quantity),
-            avg_price=float(p.avg_buy_price),
-            current_price=float(current_price),
-            current_value=float(current_value),
-            pnl_percent=float(pnl_percent)
-        ))
+        assets.append({
+            "symbol": symbol,
+            "quantity": holding.quantity,
+            "avg_price": holding.avg_entry_price,
+            "current_price": float(current_price),
+            "current_value": float(current_value),
+            "pnl_percent": float(pnl_percent),
+        })
 
-        total_value += current_value
+        holdings_value += current_value
 
-    return PortfolioResponse(
-        assets=assets,
-        total_value=float(total_value),
-        updated_at=datetime.utcnow()
-    )
+    # cash_balance is stored in cents (BIGINT)
+    cash_usd = Decimal(str(portfolio.cash_balance)) / Decimal("100")
+    total_value = cash_usd + holdings_value
+
+    return {
+        "cash_balance": float(cash_usd),
+        "assets": assets,
+        "total_value": float(total_value),
+        "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None,
+    }
+
+
+# ============================================================================
+# ORDER PLACEMENT
+# ============================================================================
 
 @router.post("/order", response_model=OrderResponse)
-def place_order(
+async def place_order(
     order: OrderCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_session),
 ):
-    """Place a buy or sell order (market or limit)."""
-    if order.type not in ("buy", "sell"):
-        raise HTTPException(status_code=400, detail="Type must be 'buy' or 'sell'")
-
-    if order.quantity <= 0:
-        raise HTTPException(status_code=400, detail="Quantity must be positive")
+    """Place a buy or sell market order."""
+    if order.side not in ("buy", "sell"):
+        raise HTTPException(status_code=400, detail="Side must be 'buy' or 'sell'")
 
     symbol = order.symbol.upper()
     if symbol not in MOCK_PRICES:
         raise HTTPException(status_code=400, detail=f"Unsupported symbol: {symbol}")
 
-    executed_price = Decimal(str(order.price if order.price is not None else MOCK_PRICES[symbol]))
+    executed_price = MOCK_PRICES[symbol]
+    if order.price is not None:
+        executed_price = Decimal(str(order.price))
 
-    total_cost = executed_price * Decimal(str(order.quantity))
+    quantity = Decimal(str(order.quantity))
+    total_cost = executed_price * quantity
 
-    portfolio_entry = db.query(Portfolio).filter(
-        Portfolio.user_id == current_user.id,
-        Portfolio.asset_symbol == symbol
-    ).first()
+    # Look up or create trading pair
+    result = await session.execute(
+        select(TradingPair).where(TradingPair.symbol == symbol)
+    )
+    trading_pair = result.scalar_one_or_none()
 
-    user = db.query(User).filter(User.id == current_user.id).first()
-    if not user:
-        raise HTTPException(status_code=500, detail="User not found")
+    if not trading_pair:
+        base = symbol.replace("USDT", "").replace("USD", "")
+        trading_pair = TradingPair(
+            symbol=symbol,
+            base_asset=base,
+            quote_asset="USDT",
+            name=f"{base}/USDT",
+        )
+        session.add(trading_pair)
+        await session.flush()
 
-    if order.type == "buy":
-        if user.balance_usd < total_cost:
+    # Get portfolio
+    result = await session.execute(
+        select(Portfolio).where(Portfolio.user_id == current_user.id)
+    )
+    portfolio = result.scalar_one_or_none()
+
+    if not portfolio:
+        raise HTTPException(status_code=400, detail="Portfolio not found")
+
+    # cash_balance is in cents
+    total_cost_cents = int(total_cost * 100)
+
+    # Get existing holding for this pair
+    result = await session.execute(
+        select(PortfolioHolding).where(
+            PortfolioHolding.user_id == current_user.id,
+            PortfolioHolding.trading_pair_id == trading_pair.id,
+        )
+    )
+    holding = result.scalar_one_or_none()
+
+    if order.side == "buy":
+        if portfolio.cash_balance < total_cost_cents:
             raise HTTPException(status_code=400, detail="Insufficient USD balance")
 
-        if portfolio_entry:
-            old_cost = portfolio_entry.quantity * portfolio_entry.avg_buy_price
-            new_cost = old_cost + total_cost
-            new_qty = portfolio_entry.quantity + Decimal(str(order.quantity))
-            portfolio_entry.avg_buy_price = new_cost / new_qty
-            portfolio_entry.quantity = new_qty
+        if holding:
+            old_cost = Decimal(str(holding.quantity)) * Decimal(str(holding.avg_entry_price))
+            new_qty = Decimal(str(holding.quantity)) + quantity
+            new_avg = (old_cost + total_cost) / new_qty
+            holding.quantity = float(new_qty)
+            holding.avg_entry_price = float(new_avg)
         else:
-            portfolio_entry = Portfolio(
+            holding = PortfolioHolding(
                 user_id=current_user.id,
-                asset_symbol=symbol,
-                quantity=Decimal(str(order.quantity)),
-                avg_buy_price=executed_price
+                trading_pair_id=trading_pair.id,
+                quantity=float(quantity),
+                avg_entry_price=float(executed_price),
             )
-            db.add(portfolio_entry)
+            session.add(holding)
 
-        user.balance_usd -= total_cost
+        portfolio.cash_balance -= total_cost_cents
 
     else:  # sell
-        if not portfolio_entry or portfolio_entry.quantity < Decimal(str(order.quantity)):
+        if not holding or holding.quantity < float(quantity):
             raise HTTPException(status_code=400, detail="Insufficient holdings")
 
-        portfolio_entry.quantity -= Decimal(str(order.quantity))
-        user.balance_usd += total_cost
+        remaining = Decimal(str(holding.quantity)) - quantity
+        if remaining <= Decimal("0.00000001"):
+            await session.delete(holding)
+        else:
+            holding.quantity = float(remaining)
 
-        if portfolio_entry.quantity <= 0:
-            db.delete(portfolio_entry)
+        portfolio.cash_balance += total_cost_cents
 
-    # Record trade
-    trade = Trade(
+    # Create Order record
+    order_record = Order(
         user_id=current_user.id,
-        symbol=symbol,
-        type=order.type,
-        quantity=Decimal(str(order.quantity)),
-        price=executed_price,
-        executed_at=datetime.utcnow()
+        trading_pair_id=trading_pair.id,
+        order_type="market",
+        side=order.side,
+        status="filled",
+        quantity=float(quantity),
+        price=float(executed_price),
+        filled_quantity=float(quantity),
+        filled_avg_price=float(executed_price),
+        total_cost=total_cost_cents,
+        filled_at=datetime.now(UTC),
     )
-    db.add(trade)
+    session.add(order_record)
+    await session.flush()
 
-    db.commit()
-    db.refresh(trade)
+    # Create Trade record
+    trade = Trade(
+        order_id=order_record.id,
+        user_id=current_user.id,
+        trading_pair_id=trading_pair.id,
+        side=order.side,
+        quantity=float(quantity),
+        price=float(executed_price),
+        total_value=total_cost_cents,
+        executed_at=datetime.now(UTC),
+    )
+    session.add(trade)
+
+    portfolio.total_trades = (portfolio.total_trades or 0) + 1
+
+    await session.commit()
 
     return OrderResponse(
         success=True,
-        message=f"{order.type.capitalize()} executed at ${float(executed_price):.2f}",
-        trade_id=trade.id
+        message=f"{order.side.capitalize()} {quantity} {symbol} at ${float(executed_price):,.2f}",
+        trade_id=str(trade.id),
     )
 
-@router.get("/trades/history", response_model=List[dict])
-def get_trade_history(
+
+# ============================================================================
+# TRADE HISTORY
+# ============================================================================
+
+@router.get("/trades/history")
+async def get_trade_history(
     limit: int = 10,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_session),
 ):
     """Get recent trades for the current user."""
-    trades = (
-        db.query(Trade)
-        .filter(Trade.user_id == current_user.id)
-        .order_by(desc(Trade.executed_at))
+    if limit > 100:
+        limit = 100
+
+    result = await session.execute(
+        select(Trade, TradingPair.symbol)
+        .join(TradingPair, Trade.trading_pair_id == TradingPair.id)
+        .where(Trade.user_id == current_user.id)
+        .order_by(Trade.executed_at.desc())
         .limit(limit)
-        .all()
     )
+    rows = result.all()
 
     return [
         {
-            "id": t.id,
-            "symbol": t.symbol,
-            "type": t.type.capitalize(),
-            "quantity": float(t.quantity),
-            "price": float(t.price),
-            "total": float(t.quantity * t.price),
-            "executed_at": t.executed_at.isoformat()
+            "id": str(t.id),
+            "symbol": symbol,
+            "side": t.side,
+            "quantity": t.quantity,
+            "price": t.price,
+            "total_value": t.total_value / 100,  # cents to dollars
+            "executed_at": t.executed_at.isoformat(),
         }
-        for t in trades
+        for t, symbol in rows
     ]

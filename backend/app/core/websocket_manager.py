@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Set
 from datetime import datetime
 import websockets
-from aioredis import Redis
+from redis.asyncio import Redis
 
 logger = logging.getLogger(__name__)
 

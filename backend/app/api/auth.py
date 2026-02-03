@@ -3,7 +3,7 @@ Authentication API routes
 Handles user registration, login, token refresh, and email verification
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from datetime import datetime, timedelta, UTC
@@ -40,6 +40,7 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @rate_limit_signup
 async def register(
+    request: Request,
     user_data: UserRegister,
     session: AsyncSession = Depends(get_session)
 ):
@@ -126,6 +127,7 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 @rate_limit_auth
 async def login(
+    request: Request,
     credentials: UserLogin,
     response: Response,
     session: AsyncSession = Depends(get_session)

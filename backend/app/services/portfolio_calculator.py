@@ -17,9 +17,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis.asyncio import Redis
 
-from ..models.portfolio import Portfolio, PortfolioHolding
-from ..core.database import get_db
-from ..core.redis import get_redis
+from app.models.portfolio import Portfolio, PortfolioHolding
+from app.core.database import get_session
+from app.core.redis import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -269,9 +269,9 @@ async def get_portfolio_calculator(
     """Factory function for dependency injection"""
     
     if db is None:
-        db = await get_db().__anext__()
-    
+        db = await get_session().__anext__()
+
     if redis is None:
-        redis = await get_redis()
-    
+        redis = get_redis_client()
+
     return PortfolioCalculator(db, redis)

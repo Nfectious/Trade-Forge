@@ -3,7 +3,6 @@ Main FastAPI application
 Entry point for the Crypto Simulation Platform API
 """
 
-import redis.asyncio as aioredis
 import asyncio
 
 from fastapi import FastAPI, Request
@@ -16,6 +15,7 @@ import logging
 from app.core.config import settings
 from app.core.security import limiter
 from app.core.database import close_db
+from app.core.redis import init_redis, get_redis_client, close_redis
 from app.core.websocket_manager import WebSocketManager
 
 # Configure logging
@@ -26,10 +26,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
-# GLOBAL STATE (WebSocket Manager & Redis)
+# GLOBAL STATE (WebSocket Manager only — Redis is in app.core.redis)
 # ============================================================================
 
-redis_client = None
 ws_manager = None
 
 # ============================================================================
@@ -38,23 +37,20 @@ ws_manager = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_client, ws_manager
+    global ws_manager
 
-    logger.info("🚀 Starting Crypto Platform API")
+    logger.info("Starting Crypto Platform API")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
 
-    # Initialize Redis connection
+    # Initialize Redis via shared module
     try:
-        redis_client = await aioredis.from_url(
-            settings.REDIS_URL,
-            encoding="utf-8",
-            decode_responses=False
-        )
-        logger.info("✅ Redis connected")
+        await init_redis(settings.REDIS_URL)
+        logger.info("Redis connected")
     except Exception as e:
-        logger.error(f"❌ Redis connection failed: {e}")
-        redis_client = None
+        logger.error(f"Redis connection failed: {e}")
+
+    redis_client = get_redis_client()
 
     # Initialize WebSocket Manager (only if Redis is available)
     if redis_client:
@@ -72,31 +68,30 @@ async def lifespan(app: FastAPI):
             await ws_manager.subscribe("kraken", "XBT/USD")
             await ws_manager.subscribe("kraken", "ETH/USD")
 
-            logger.info("✅ Live price feeds operational")
+            logger.info("Live price feeds operational")
 
         except Exception as e:
-            logger.error(f"❌ WebSocket manager failed: {e}")
+            logger.error(f"WebSocket manager failed: {e}")
             ws_manager = None
 
-    logger.info("✅ Application startup complete")
+    logger.info("Application startup complete")
 
     yield  # Application runs here
 
     # ==================== SHUTDOWN ====================
-    logger.info("🛑 Shutting down Crypto Platform API")
+    logger.info("Shutting down Crypto Platform API")
 
     if ws_manager:
         await ws_manager.disconnect()
-        logger.info("✅ WebSocket feeds closed")
+        logger.info("WebSocket feeds closed")
 
-    if redis_client:
-        await redis_client.close()
-        logger.info("✅ Redis connection closed")
+    await close_redis()
+    logger.info("Redis connection closed")
 
     await close_db()
-    logger.info("✅ Database connections closed")
+    logger.info("Database connections closed")
 
-    logger.info("✅ Shutdown complete")
+    logger.info("Shutdown complete")
 
 # ============================================================================
 # CREATE FASTAPI APP
@@ -169,18 +164,16 @@ async def root():
         "message": "Crypto Simulation Platform API",
         "version": "1.0.0",
         "status": "operational",
-        "environment": settings.ENVIRONMENT,
         "websocket_status": "connected" if ws_manager and ws_manager.running else "disconnected",
-        "redis_status": "connected" if redis_client else "disconnected"
+        "redis_status": "connected" if get_redis_client() else "disconnected"
     }
 
 @app.get("/health")
 async def health_check():
     return {
         "status": "healthy",
-        "environment": settings.ENVIRONMENT,
         "services": {
-            "redis": "up" if redis_client else "down",
+            "redis": "up" if get_redis_client() else "down",
             "websocket_feeds": "up" if ws_manager and ws_manager.running else "down"
         }
     }
