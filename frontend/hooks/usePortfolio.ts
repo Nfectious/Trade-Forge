@@ -24,7 +24,7 @@ export function usePortfolio(autoRefresh: boolean = true): UsePortfolioReturn {
   const fetchPortfolio = useCallback(async () => {
     try {
       setError(null)
-      const response = await apiClient.get<PortfolioResponse>('/api/trading/portfolio')
+      const response = await apiClient.get<PortfolioResponse>('/trading/portfolio')
       setPortfolio(response.data)
     } catch (err: any) {
       console.error('Failed to fetch portfolio:', err)
