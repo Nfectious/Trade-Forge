@@ -214,7 +214,7 @@ check_endpoint() {
 
 check_endpoint "Backend Health" "http://127.0.0.1:8000/health"
 check_endpoint "API Docs"       "http://127.0.0.1:8000/docs"
-check_endpoint "Frontend"       "http://127.0.0.1:3000"
+check_endpoint "Frontend"       "http://127.0.0.1:3001"
 
 echo ""
 echo -e "${CYAN}========================================${NC}"

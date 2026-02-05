@@ -57,7 +57,7 @@ SMTP_FROM=noreply@resend.dev
 # =============================================================================
 # APPLICATION URLS
 # =============================================================================
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
 BACKEND_URL=http://localhost:8000
 BACKEND_WS_URL=ws://localhost:8000/market/ws/prices
 

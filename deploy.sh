@@ -47,7 +47,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 # URLs (UPDATE THESE FOR PRODUCTION)
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3001
 BACKEND_URL=http://localhost:8000
 # Email (UPDATE THESE)
 SMTP_HOST=smtp.gmail.com
@@ -127,7 +127,7 @@ check_service() {
 check_service "Backend API" "http://localhost:8000/health"
 
 # Check frontend
-check_service "Frontend" "http://localhost:3000"
+check_service "Frontend" "http://localhost:3001"
 
 # Show final status
 echo ""
@@ -135,7 +135,7 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}✅ DEPLOYMENT COMPLETE${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "🌐 ${BLUE}Frontend:${NC} ${GREEN}http://localhost:3000${NC}"
+echo -e "🌐 ${BLUE}Frontend:${NC} ${GREEN}http://localhost:3001${NC}"
 echo -e "🔌 ${BLUE}Backend API:${NC} ${GREEN}http://localhost:8000${NC}"
 echo -e "📚 ${BLUE}API Docs:${NC} ${GREEN}http://localhost:8000/docs${NC}"
 echo ""
@@ -148,7 +148,7 @@ echo "2. 📧 Update email settings in .env.production"
 echo "3. 🌍 Update URLs for production deployment"
 echo "4. 🔒 Configure Nginx reverse proxy (see nginx/crypto.conf)"
 echo "5. 🔐 Set up Cloudflare DNS and SSL"
-echo "6. 🧪 Test registration: http://localhost:3000/register"
+echo "6. 🧪 Test registration: http://localhost:3001/register"
 echo ""
 echo -e "${BLUE}📖 Useful Commands:${NC}"
 echo -e " View logs: ${GREEN}docker compose logs -f${NC}"

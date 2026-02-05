@@ -192,7 +192,7 @@ Expected response:
 
 **Frontend Access:**
 
-Open browser to: `http://your-domain:3000`
+Open browser to: `http://your-domain:3001`
 
 You should see the login page.
 

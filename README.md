@@ -76,11 +76,11 @@ curl http://localhost:8000/health
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
+| Frontend | http://localhost:3001 |
 | Backend API | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:8000/docs |
 | API Docs (ReDoc) | http://localhost:8000/redoc |
-| Health Dashboard | http://localhost:3000/health |
+| Health Dashboard | http://localhost:3001/health |
 
 ## Project Structure
 

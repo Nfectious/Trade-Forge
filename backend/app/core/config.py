@@ -89,7 +89,7 @@ class Settings(BaseSettings):
         origins = [self.FRONTEND_URL]
         if self.ENVIRONMENT == "development":
             origins.extend([
-                "http://localhost:3000",
+                "http://localhost:3001",
                 "http://localhost:8000"
             ])
         return origins
