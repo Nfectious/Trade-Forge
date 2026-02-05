@@ -152,7 +152,7 @@ services:
       - NEXT_PUBLIC_API_URL=${BACKEND_URL}
       - NEXT_PUBLIC_WS_URL=${BACKEND_WS_URL}
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3001:3000"
     depends_on:
       backend:
         condition: service_healthy

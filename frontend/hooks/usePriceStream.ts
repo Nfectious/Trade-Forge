@@ -22,7 +22,7 @@ interface UsePriceStreamReturn {
   reconnect: () => void
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/prices'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/market/ws/prices'
 const RECONNECT_DELAY = 3000 // 3 seconds
 const MAX_RECONNECT_ATTEMPTS = 10
 

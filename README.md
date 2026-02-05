@@ -6,21 +6,23 @@ TradeForge is a full-stack crypto paper trading platform with live WebSocket pri
 
 ## Tech Stack
 
-| Layer    | Technology                                         |
-|----------|---------------------------------------------------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS              |
-| Backend  | FastAPI 0.115, Python 3.12, Gunicorn + Uvicorn   |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Backend | FastAPI 0.115, Python 3.12, Gunicorn + Uvicorn |
 | Database | PostgreSQL 16 (40+ tables, UUID PKs, DB triggers) |
-| Cache    | Redis 7 (price cache, rate limiting, sessions)    |
-| Auth     | JWT access tokens + httpOnly refresh cookies, Argon2id |
-| Prices   | WebSocket feeds from Binance, Bybit, Kraken       |
-| Infra    | Docker Compose, multi-stage builds                |
+| Cache | Redis 7 (price cache, rate limiting, sessions) |
+| Auth | JWT access tokens + httpOnly refresh cookies, Argon2id |
+| Prices | WebSocket feeds from Binance, Bybit, Kraken |
+| Infra | Docker Compose, multi-stage builds |
+
 ## Prerequisites
 
 - Docker and Docker Compose v2
 - Git
 - 8GB RAM recommended (4GB minimum)
-- Ports 3000 and 8000 available
+- Ports 3001 and 8000 available
+
 ## Setup
 
 ### 1. Clone and configure
@@ -32,6 +34,7 @@ cp .env.example .env.production
 ```
 
 ### 2. Generate secrets
+
 Fill in the required values in `.env.production`:
 
 ```bash
@@ -43,12 +46,13 @@ openssl rand -hex 64                                   # JWT_SECRET_KEY
 
 Then update `DATABASE_URL` and `REDIS_URL` with the passwords you generated:
 
-```bash
+```
 DATABASE_URL=postgresql+asyncpg://crypto_admin:YOUR_DB_PASSWORD@postgres:5432/crypto_platform
 REDIS_URL=redis://:YOUR_REDIS_PASSWORD@redis:6379/0
 ```
 
 ### 3. Start services
+
 **Development:**
 ```bash
 docker compose up -d
@@ -70,13 +74,14 @@ sudo ./scripts/deploy.sh
 curl http://localhost:8000/health
 ```
 
-| Service            | URL                               |
-|--------------------|-----------------------------------|
-| Frontend           | http://localhost:3000             |
-| Backend API        | http://localhost:8000             |
-| API Docs (Swagger) | http://localhost:8000/docs        |
-| API Docs (ReDoc)   | http://localhost:8000/redoc       |
-| Health Dashboard   | http://localhost:3000/health      |
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3001 |
+| Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
+| API Docs (ReDoc) | http://localhost:8000/redoc |
+| Health Dashboard | http://localhost:3001/health |
+
 ## Project Structure
 
 ```
@@ -150,62 +155,60 @@ Trade-Forge/
 ```
 
 ## API Endpoints
-### Auth
 
-| Method | Path              | Description                                      |
-|--------|-------------------|--------------------------------------------------|
-| POST   | /auth/register    | Create account                                   |
-| POST   | /auth/login       | Login (returns JWT + sets refresh cookie)        |
-| POST   | /auth/refresh     | Refresh access token (reads httpOnly cookie)     |
-| GET    | /auth/me          | Get current user                                 |
+### Auth
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/register` | Create account |
+| POST | `/auth/login` | Login (returns JWT + sets refresh cookie) |
+| POST | `/auth/refresh` | Refresh access token (reads httpOnly cookie) |
+| GET | `/auth/me` | Get current user |
 
 ### Trading
-
-| Method | Path                | Description                     |
-|--------|---------------------|---------------------------------|
-| GET    | /trading/portfolio  | Get portfolio with holdings     |
-| POST   | /trading/order      | Place market order              |
-| GET    | /trading/history    | Trade history                   |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/trading/portfolio` | Get portfolio with holdings |
+| POST | `/trading/order` | Place market order |
+| GET | `/trading/history` | Trade history |
 
 ### Market
-
-| Method | Path                 | Description                    |
-|--------|----------------------|--------------------------------|
-| GET    | /market/prices       | Current cached prices          |
-| WS     | /market/ws/prices    | Live price WebSocket stream    |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/market/prices` | Current cached prices |
+| WS | `/market/ws/prices` | Live price WebSocket stream |
 
 ### Wallet
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/wallet/balance` | Get wallet balance |
 
-| Method | Path             | Description          |
-|--------|------------------|----------------------|
-| GET    | /wallet/balance  | Get wallet balance   |
 ## Configuration
 
 All configuration is in `.env.production`. See `.env.example` for the full template with comments.
 
 **Required variables:**
 
-| Variable                     | Description                         |
-|------------------------------|-------------------------------------|
-| DB_USER / DB_PASSWORD        | PostgreSQL credentials              |
-| DATABASE_URL                 | Async connection string             |
-| REDIS_PASSWORD / REDIS_URL   | Redis credentials                   |
-| JWT_SECRET_KEY               | Token signing key (64+ hex chars)   |
-| FRONTEND_URL                 | CORS origin                         |
+| Variable | Description |
+|----------|-------------|
+| `DB_USER` / `DB_PASSWORD` | PostgreSQL credentials |
+| `DATABASE_URL` | Async connection string |
+| `REDIS_PASSWORD` / `REDIS_URL` | Redis credentials |
+| `JWT_SECRET_KEY` | Token signing key (64+ hex chars) |
+| `FRONTEND_URL` | CORS origin |
 
 **Optional variables:**
 
-| Variable               | Description                               |
-|------------------------|-------------------------------------------|
-| SMTP_HOST / SMTP_PASSWORD | Email verification (Resend, Gmail, etc.) |
-| KRAKEN_API_KEY         | Kraken exchange API                       |
-| COINGECKO_API_KEY      | CoinGecko price data                      |
-| OPENROUTER_API_KEY     | AI trading features                       |
-| STRIPE_RESTRICTED_KEY  | Payment processing for paid tiers         |
+| Variable | Description |
+|----------|-------------|
+| `SMTP_HOST` / `SMTP_PASSWORD` | Email verification (Resend, Gmail, etc.) |
+| `KRAKEN_API_KEY` | Kraken exchange API |
+| `COINGECKO_API_KEY` | CoinGecko price data |
+| `OPENROUTER_API_KEY` | AI trading features |
+| `STRIPE_RESTRICTED_KEY` | Payment processing for paid tiers |
+
 ## Scripts
 
 ### Deploy
-
 ```bash
 sudo ./scripts/deploy.sh              # Full deploy (pull, build, health check)
 sudo ./scripts/deploy.sh --no-pull    # Build from local code only
@@ -214,22 +217,22 @@ sudo ./scripts/deploy.sh --rollback   # Roll back to previous version
 ```
 
 ### Backup
-
 ```bash
 sudo ./scripts/backup.sh
 ```
+
 Backs up PostgreSQL (pg_dump + gzip), Redis (RDB snapshot), and `.env.production`. Deletes backups older than 7 days.
 
 Cron example (daily at 3 AM):
-```bash
+```
 0 3 * * * cd /opt/Trade-Forge && ./scripts/backup.sh >> logs/backup.log 2>&1
 ```
 
 ### Status
-
 ```bash
 ./scripts/status.sh
 ```
+
 Shows container health, resource usage, DB connections/size, Redis memory, recent errors, disk space, and endpoint checks.
 
 ## Production Deployment
@@ -251,8 +254,8 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ### SSL
-Use Cloudflare (set SSL mode to "Full (strict)") or certbot:
 
+Use Cloudflare (set SSL mode to "Full (strict)") or certbot:
 ```bash
 sudo certbot --nginx -d crypto.yourdomain.com
 ```
@@ -268,6 +271,7 @@ sudo certbot --nginx -d crypto.yourdomain.com
 - `SELECT FOR UPDATE` row-level locking on trades (prevents balance race conditions)
 - All DB ports bound to 127.0.0.1 (localhost only)
 - Input validation: email max 255 chars, password max 128 chars
+
 ## Troubleshooting
 
 **Backend won't start:**
@@ -295,7 +299,7 @@ docker compose restart redis backend
 
 ## Community
 
-- [TradeForge Discord](#)
+- [TradeForge Discord](https://discord.gg/dUFzBjJT6N)
 - [GitHub Issues](https://github.com/Nfectious/Trade-Forge/issues)
 
 ## License

@@ -186,7 +186,7 @@ fi
 
 DEPLOY_OK=true
 check_health "backend" "http://127.0.0.1:8000/health" 20 || DEPLOY_OK=false
-check_health "frontend" "http://127.0.0.1:3000" 20 || DEPLOY_OK=false
+check_health "frontend" "http://127.0.0.1:3001" 20 || DEPLOY_OK=false
 
 ###############################################################################
 # CLEANUP
@@ -203,10 +203,10 @@ if [ "$DEPLOY_OK" = true ]; then
     echo -e "${GREEN}  DEPLOY SUCCESSFUL${NC}"
     echo -e "${GREEN}============================================${NC}"
     echo ""
-    echo -e "  Frontend:  ${BLUE}http://127.0.0.1:3000${NC}"
+    echo -e "  Frontend:  ${BLUE}http://127.0.0.1:3001${NC}"
     echo -e "  Backend:   ${BLUE}http://127.0.0.1:8000${NC}"
     echo -e "  API Docs:  ${BLUE}http://127.0.0.1:8000/docs${NC}"
-    echo -e "  Health:    ${BLUE}http://127.0.0.1:3000/health${NC}"
+    echo -e "  Health:    ${BLUE}http://127.0.0.1:3001/health${NC}"
     echo ""
     docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 else

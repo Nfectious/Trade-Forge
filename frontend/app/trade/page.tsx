@@ -1,9 +1,9 @@
-import axios from 'axios';
-import { LivePrice } from '@/components/LivePrice';
-import { PriceTicker } from '@/components/PriceTicker';
-import { usePriceStream } from '@/hooks/usePriceStream';import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import LivePrice from '../components/LivePrice';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { usePriceStream } from '@/hooks/usePriceStream';
+import { api } from '@/lib/api';
 
 const Trading = () => {
   const { prices, isConnected } = usePriceStream();
@@ -11,28 +11,30 @@ const Trading = () => {
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [type, setType] = useState('buy');
   const [quantity, setQuantity] = useState(0);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem('JWT')) {
+    if (!localStorage.getItem('access_token')) {
       router.push('/login');
     }
   }, [router]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      const token = localStorage.getItem('JWT');
-      await axios.post('/trading/order', { symbol, type, quantity }, { headers: { Authorization: `Bearer ${token}` } });
+      setError(null);
+      await api.post('/trading/order', { symbol, side: type, quantity: Number(quantity) });
       setLoading(false);
       alert('Order placed!');
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message);
       setLoading(false);
     }
   };
+
+  const currentPrice = prices[symbol];
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -40,12 +42,17 @@ const Trading = () => {
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-white">Trading Simulator</h1>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${isConnected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            {isConnected ? '🟢 Live Data' : '🔴 Disconnected'}
+            {isConnected ? 'Live Data' : 'Disconnected'}
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-4">
-            <LivePrice symbol={symbol} exchanges={['binance', 'bybit', 'kraken']} />
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="text-sm text-gray-400 mb-1">{symbol}</h3>
+              <p className="text-2xl font-bold text-white">
+                {currentPrice ? `$${currentPrice.toLocaleString()}` : 'Loading...'}
+              </p>
+            </div>
           </div>
           <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6 border border-gray-700">
             <h2 className="text-xl font-semibold text-white mb-4">Execute Trade</h2>
@@ -60,15 +67,15 @@ const Trading = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Type</label>
+                  <label className="block text-sm text-gray-400 mb-2">Side</label>
                   <select value={type} onChange={(e) => setType(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white">
-                    <option>buy</option>
-                    <option>sell</option>
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Quantity</label>
-                  <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white" />
+                  <input type="number" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value as any)} className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white" />
                 </div>
                 <div className="flex items-end gap-2">
                   <button type="submit" disabled={loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium">
@@ -80,7 +87,6 @@ const Trading = () => {
             </form>
           </div>
         </div>
-        <TradeHistoryTable />
       </div>
     </div>
   );
