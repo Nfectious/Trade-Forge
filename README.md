@@ -21,7 +21,7 @@ TradeForge is a full-stack crypto paper trading platform with live WebSocket pri
 - Docker and Docker Compose v2
 - Git
 - 8GB RAM recommended (4GB minimum)
-- Ports 3000 and 8000 available
+- Ports 3001 and 8000 available
 
 ## Setup
 
@@ -268,7 +268,7 @@ sudo certbot --nginx -d crypto.yourdomain.com
 - Rate limiting on auth (5 register/hr, 10 login/hr) and trading (30 orders/min)
 - Security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options)
 - CORS restricted to configured frontend origin
-- SELECT FOR UPDATE row-level locking on trades (prevents balance race conditions)
+- `SELECT FOR UPDATE` row-level locking on trades (prevents balance race conditions)
 - All DB ports bound to 127.0.0.1 (localhost only)
 - Input validation: email max 255 chars, password max 128 chars
 
