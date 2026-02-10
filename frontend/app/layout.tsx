@@ -1,9 +1,6 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import Image from 'next/image'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'TradeForge – Crypto Sim Trading',
@@ -17,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className="font-sans">
         <div className="min-h-screen bg-crypto-dark-bg text-crypto-dark-text">
           <header className="border-b border-crypto-dark-border">
             <nav className="container mx-auto px-4 py-3 flex items-center gap-3">

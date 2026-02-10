@@ -1,8 +1,10 @@
-import axios from 'axios';
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { usePriceStream } from '../hooks/usePriceStream';
-import LivePrice from '../components/LivePrice';
+import { useRouter } from 'next/navigation';
+import { usePriceStream } from '@/hooks/usePriceStream';
+import LivePrice from '@/components/LivePrice';
+import api from '@/lib/api';
 
 const Trading = () => {
   const { prices, isConnected } = usePriceStream();
@@ -14,7 +16,7 @@ const Trading = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem('JWT')) {
+    if (!localStorage.getItem('access_token')) {
       router.push('/login');
     }
   }, [router]);
@@ -23,12 +25,11 @@ const Trading = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const token = localStorage.getItem('JWT');
-      await axios.post('/trading/order', { symbol, type, quantity }, { headers: { Authorization: `Bearer ${token}` } });
+      await api.post('/trading/order', { symbol, side: type, quantity: Number(quantity) });
       setLoading(false);
       alert('Order placed!');
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message);
       setLoading(false);
     }
   };
@@ -79,7 +80,6 @@ const Trading = () => {
             </form>
           </div>
         </div>
-        <TradeHistoryTable />
       </div>
     </div>
   );

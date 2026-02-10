@@ -1,6 +1,8 @@
+'use client';
+
 import axios from 'axios';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
@@ -20,7 +22,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('JWT')) {
+    if (localStorage.getItem('access_token')) {
       router.push('/dashboard');
     }
   }, [router]);

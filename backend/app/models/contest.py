@@ -3,7 +3,7 @@ Contest model for trading competitions
 Maps to: contests table in init.sql
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel
 

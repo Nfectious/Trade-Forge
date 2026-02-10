@@ -1,6 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useRouter } from 'next/router';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import withAuth from '../../components/withAuth';
 import LivePrice from '../../components/LivePrice';
@@ -10,7 +11,6 @@ const Dashboard = () => {
   const [portfolio, setPortfolio] = useState({ assets: [] });
   const [marketPrices, setMarketPrices] = useState({});
   const [error, setError] = useState(null);
-  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {

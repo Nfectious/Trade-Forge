@@ -187,6 +187,9 @@ export const apiClient = new APIClient()
 // Alias used by auth.tsx
 export const api = apiClient
 
+// Default export for convenience
+export default api
+
 /**
  * API response types
  */

@@ -76,11 +76,13 @@ async def create_contest(
     contest = Contest(
         name=contest_data.name,
         description=contest_data.description,
-        start_date=contest_data.start_date,
-        end_date=contest_data.end_date,
-        entry_fee_cents=contest_data.entry_fee_cents,
-        prize_pool_cents=contest_data.prize_pool_cents,
-        max_participants=contest_data.max_participants
+        type=contest_data.type,
+        start_time=contest_data.start_time,
+        end_time=contest_data.end_time,
+        entry_fee=contest_data.entry_fee,
+        starting_balance=contest_data.starting_balance,
+        max_participants=contest_data.max_participants,
+        created_by=admin.id
     )
     session.add(contest)
     await session.commit()
