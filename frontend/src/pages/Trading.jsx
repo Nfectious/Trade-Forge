@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Image from 'next/image';
-import { LucideIcon } from '@lucide-react';
 
 const Trading = () => {
   const router = useRouter();
