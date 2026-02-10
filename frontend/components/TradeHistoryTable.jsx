@@ -1,6 +1,5 @@
-// frontend/src/components/TradeHistoryTable.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 
 const TradeHistoryTable = () => {
   const [trades, setTrades] = useState([]);
@@ -8,16 +7,7 @@ const TradeHistoryTable = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('JWT');
-    if (!token) {
-      setError('Not authenticated');
-      setLoading(false);
-      return;
-    }
-
-    axios.get('/trading/trades/history', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    api.get('/trading/trades/history')
       .then(response => {
         setTrades(response.data || []);
         setLoading(false);

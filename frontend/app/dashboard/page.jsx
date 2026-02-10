@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import withAuth from '../../components/withAuth';
 import LivePrice from '../../components/LivePrice';
@@ -15,13 +15,13 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const authMeResponse = await axios.get('/api/auth/me');
+        const authMeResponse = await api.get('/auth/me');
         setUser(authMeResponse.data);
 
-        const portfolioResponse = await axios.get('/api/portfolio');
+        const portfolioResponse = await api.get('/portfolio');
         setPortfolio(portfolioResponse.data);
 
-        const marketPricesResponse = await axios.get('/api/market/prices?symbols=BTC,ETH,SOL');
+        const marketPricesResponse = await api.get('/market/prices?symbols=BTC,ETH,SOL');
         setMarketPrices(marketPricesResponse.data);
       } catch (err) {
         setError(err.message);

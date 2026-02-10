@@ -36,6 +36,7 @@ from app.models.user import (
     UserProfile
 )
 from app.core.config import settings
+from app.services.email_service import send_verification_email
 
 
 router = APIRouter()
@@ -120,8 +121,7 @@ async def register(
     session.add(token_record)
     await session.commit()
     
-    # TODO: Send verification email via aiosmtplib (email service to be implemented)
-    logger.debug("Verification token generated for user_id=%s", new_user.id)
+    send_verification_email(new_user.email, verification_token, settings.FRONTEND_URL)
     
     return new_user
 

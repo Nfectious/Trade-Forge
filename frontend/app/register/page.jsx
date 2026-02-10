@@ -1,7 +1,7 @@
 'use client';
 
-import axios from 'axios';
 import { useState, useEffect } from 'react';
+import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
@@ -32,7 +32,7 @@ const Register = () => {
     try {
       registerSchema.parse({ username, email, password });
       setLoading(true);
-      const response = await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/register', { username, email, password });
+      const response = await api.post('/auth/register', { username, email, password });
       router.push('/login');
     } catch (err) {
       setError(err.errors?.[0]?.message || err.message);
