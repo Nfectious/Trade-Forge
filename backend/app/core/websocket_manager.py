@@ -78,7 +78,9 @@ class WebSocketManager:
             try:
                 streams = [f"{s.lower()}@trade" for s in self.subscriptions["binance"]]
                 if not streams:
-                    streams = ["btcusdt@trade", "ethusdt@trade", "solusdt@trade"]  # Defaults
+                    streams = ["btcusdt@trade", "ethusdt@trade", "solusdt@trade",
+                               "adausdt@trade", "dotusdt@trade", "avaxusdt@trade",
+                               "linkusdt@trade", "dogeusdt@trade", "xrpusdt@trade", "bnbusdt@trade"]
                 
                 url = f"{self.endpoints['binance']}/{'/'.join(streams)}"
                 
@@ -104,7 +106,7 @@ class WebSocketManager:
                     # Subscribe to symbols
                     subscribe_msg = {
                         "op": "subscribe",
-                        "args": [f"publicTrade.{s.upper()}" for s in self.subscriptions["bybit"] or ["BTCUSDT", "ETHUSDT", "SOLUSDT"]]
+                        "args": [f"publicTrade.{s.upper()}" for s in self.subscriptions["bybit"] or ["BTCUSDT"]]
                     }
                     await ws.send(json.dumps(subscribe_msg))
                     logger.info("✅ Bybit connected")

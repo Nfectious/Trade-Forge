@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ from app.models.user import (
     UserProfile
 )
 from app.core.config import settings
+from app.services.email_service import send_verification_email
 
 
 router = APIRouter()
@@ -109,7 +110,7 @@ async def register(
     
     # Generate verification token
     verification_token = generate_verification_token()
-    expires_at = datetime.now(UTC) + timedelta(hours=24)
+    expires_at = datetime.utcnow() + timedelta(hours=24)
     
     token_record = EmailVerificationToken(
         user_id=new_user.id,
@@ -120,8 +121,7 @@ async def register(
     session.add(token_record)
     await session.commit()
     
-    # TODO: Send verification email via aiosmtplib (email service to be implemented)
-    logger.debug("Verification token generated for user_id=%s", new_user.id)
+    send_verification_email(new_user.email, verification_token, settings.FRONTEND_URL)
     
     return new_user
 
@@ -167,7 +167,7 @@ async def login(
         )
     
     # Update last login
-    user.last_login = datetime.now(UTC)
+    user.last_login = datetime.utcnow()
     await session.commit()
     
     # Create tokens
@@ -175,7 +175,7 @@ async def login(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     # Save refresh token to database
-    expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     token_record = RefreshToken(
         user_id=user.id,
         token=refresh_token,
@@ -227,7 +227,7 @@ async def verify_email(
         )
     
     # Check if token is expired
-    if token_record.expires_at < datetime.now(UTC):
+    if token_record.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Verification token has expired"
@@ -242,7 +242,7 @@ async def verify_email(
     )
     user = result.scalar_one()
     user.status = "active"
-    user.verified_at = datetime.now(UTC)
+    user.verified_at = datetime.utcnow()
     
     await session.commit()
     
@@ -305,7 +305,7 @@ async def refresh_access_token(
         )
     
     # Check if token is expired
-    if token_record.expires_at < datetime.now(UTC):
+    if token_record.expires_at < datetime.utcnow():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has expired"
@@ -321,7 +321,7 @@ async def refresh_access_token(
     token_record.revoked = True
     
     # Save new refresh token
-    new_expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    new_expires_at = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     new_token_record = RefreshToken(
         user_id=token_record.user_id,
         token=new_refresh_token,

@@ -6,10 +6,15 @@ Uses SQLModel with async PostgreSQL
 from sqlmodel import SQLModel, create_engine, Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from typing import AsyncGenerator
 
 from app.core.config import settings
+
+
+# SQLAlchemy Base for models that use pure SQLAlchemy (e.g. contest.py)
+class Base(DeclarativeBase):
+    pass
 
 
 # Create async engine
@@ -36,7 +41,7 @@ async_session = sessionmaker(
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency function to get database session
-    
+
     Usage:
         @app.get("/users")
         async def get_users(session: AsyncSession = Depends(get_session)):
@@ -54,9 +59,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """Initialize database tables (for development only)"""
+    """Initialize database tables"""
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db() -> None:

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+  <rect width="40" height="40" rx="8" fill="#1a1a2e"/>
+  <path d="M8 28 L14 16 L20 22 L26 12 L32 18" stroke="#00d4ff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 28 L14 16 L20 22 L26 12 L32 18 L32 28 Z" fill="#00d4ff" opacity="0.15"/>
+  <text x="20" y="36" text-anchor="middle" font-family="Arial,sans-serif" font-size="5" font-weight="bold" fill="#00d4ff">TF</text>
+</svg>

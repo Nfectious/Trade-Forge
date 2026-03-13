@@ -1,6 +1,5 @@
-// frontend/src/components/TradeHistoryTable.jsx
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 
 const TradeHistoryTable = () => {
   const [trades, setTrades] = useState([]);
@@ -8,16 +7,7 @@ const TradeHistoryTable = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('JWT');
-    if (!token) {
-      setError('Not authenticated');
-      setLoading(false);
-      return;
-    }
-
-    axios.get('/trading/trades/history', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    api.get('/trading/trades/history')
       .then(response => {
         setTrades(response.data || []);
         setLoading(false);
@@ -52,12 +42,12 @@ const TradeHistoryTable = () => {
                 {new Date(trade.executed_at).toLocaleString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">{trade.symbol}</td>
-              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${trade.type.toLowerCase() === 'buy' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {trade.type}
+              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${trade.side === 'buy' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {trade.side}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{trade.quantity}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">${trade.price.toFixed(2)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">${trade.total.toFixed(2)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">${(trade.total_value ?? 0).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>

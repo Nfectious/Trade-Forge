@@ -61,9 +61,9 @@ async def lifespan(app: FastAPI):
             asyncio.create_task(ws_manager.connect())
 
             # Subscribe to default trading pairs
-            await ws_manager.subscribe("binance", "BTCUSDT")
-            await ws_manager.subscribe("binance", "ETHUSDT")
-            await ws_manager.subscribe("binance", "SOLUSDT")
+            for sym in ["BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "DOTUSDT",
+                         "AVAXUSDT", "LINKUSDT", "DOGEUSDT", "XRPUSDT", "BNBUSDT"]:
+                await ws_manager.subscribe("binance", sym)
             await ws_manager.subscribe("bybit", "BTCUSDT")
             await ws_manager.subscribe("kraken", "XBT/USD")
             await ws_manager.subscribe("kraken", "ETH/USD")
@@ -140,7 +140,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         status_code=429,
         content={
             "detail": "Rate limit exceeded. Please try again later.",
-            "retry_after": exc.retry_after
+            "retry_after": getattr(exc, "retry_after", 60)
         }
     )
 
@@ -191,13 +191,14 @@ async def health_check():
 # API ROUTES
 # ============================================================================
 
-from app.api import auth, users, wallet, trading, admin, market
+from app.api import auth, users, wallet, trading, admin, market, contests
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(wallet.router, prefix="/wallet", tags=["Wallet"])
 app.include_router(trading.router, prefix="/trading", tags=["Trading"])
 app.include_router(market.router, prefix="/market", tags=["Market Data"])
+app.include_router(contests.router)
 app.include_router(admin.router)
 
 # ============================================================================

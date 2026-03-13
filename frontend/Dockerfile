@@ -3,13 +3,12 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Accept build arguments
+# Accept optional build argument overrides.
+# NEXT_PUBLIC_* values are normally read from .env.production (copied below).
+# Only declare ARGs here; setting ENV from an unset ARG would write an empty
+# string that overrides the .env.production file and breaks the build.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WS_URL
-
-# Set as environment variables for build
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 
 # Copy package files
 COPY package*.json ./
@@ -20,6 +19,9 @@ RUN npm install
 
 # Copy source code
 COPY . .
+
+# Ensure public directory exists (may not be present in source)
+RUN mkdir -p /app/public
 
 # Build the application
 RUN npm run build

@@ -11,6 +11,7 @@ from decimal import Decimal, ROUND_DOWN
 from typing import List, Dict, Any, Optional, Tuple
 from uuid import UUID
 from datetime import datetime
+import json
 import logging
 
 from sqlalchemy import select
@@ -87,7 +88,9 @@ class PortfolioCalculator:
         cash_balance = Decimal(portfolio.cash_balance) / 100
         total_value = cash_balance + holdings_value
 
-        # Use 10000 USD as default starting balance (1000000 cents)
+        # Starting balance: use $10,000 default (free tier).
+        # portfolio_calculator.py is used internally; the /trading/portfolio endpoint
+        # returns tier-accurate starting_balance directly.
         starting_balance = Decimal('10000')
         total_pnl = total_value - starting_balance
         pnl_percent = (
@@ -200,11 +203,13 @@ class PortfolioCalculator:
         """Get current price from Redis (WebSocket cache)."""
         for exchange in ("binance", "kraken", "bybit"):
             redis_key = f"price:{exchange}:{symbol.upper()}"
-            price_str = await self.redis.get(redis_key)
-            if price_str:
+            raw = await self.redis.get(redis_key)
+            if raw:
                 try:
-                    return Decimal(price_str.decode('utf-8'))
-                except (ValueError, AttributeError) as e:
+                    raw_str = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+                    price_data = json.loads(raw_str)
+                    return Decimal(str(price_data["price"]))
+                except (ValueError, KeyError, AttributeError) as e:
                     logger.warning(f"Invalid price format for {symbol}: {e}")
                     continue
 

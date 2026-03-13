@@ -35,3 +35,7 @@ docker-compose.override.yml
 
 # Database backups (may contain user data)
 database/backups/*.sql
+
+# Dev artifacts / temporary extraction directories
+frontend.broken/
+backend/app_from_container/

@@ -2,7 +2,8 @@
 User models: User, UserProfile, RefreshToken, EmailVerificationToken
 """
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import Enum as SAEnum
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -55,12 +56,30 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True, max_length=255)
     password_hash: str = Field(max_length=255)
     
-    role: UserRole = Field(default=UserRole.USER, sa_column_kwargs={"server_default": "user"})
+    role: UserRole = Field(
+        default=UserRole.USER,
+        sa_column=Column(
+            SAEnum(UserRole, name="user_role", create_constraint=False, native_enum=True,
+                   values_callable=lambda e: [member.value for member in e]),
+            server_default="user"
+        )
+    )
     status: UserStatus = Field(
         default=UserStatus.PENDING_VERIFICATION,
-        sa_column_kwargs={"server_default": "pending_verification"}
+        sa_column=Column(
+            SAEnum(UserStatus, name="user_status", create_constraint=False, native_enum=True,
+                   values_callable=lambda e: [member.value for member in e]),
+            server_default="pending_verification"
+        )
     )
-    tier: TierLevel = Field(default=TierLevel.FREE, sa_column_kwargs={"server_default": "free"})
+    tier: TierLevel = Field(
+        default=TierLevel.FREE,
+        sa_column=Column(
+            SAEnum(TierLevel, name="tier_level", create_constraint=False, native_enum=True,
+                   values_callable=lambda e: [member.value for member in e]),
+            server_default="free"
+        )
+    )
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -89,7 +108,14 @@ class UserProfile(SQLModel, table=True):
     avatar_url: Optional[str] = None
     bio: Optional[str] = Field(default=None, max_length=500)
     
-    trader_type: Optional[TraderType] = None
+    trader_type: Optional[TraderType] = Field(
+        default=None,
+        sa_column=Column(
+            SAEnum(TraderType, name="trader_type", create_constraint=False, native_enum=True,
+                   values_callable=lambda e: [member.value for member in e]),
+            nullable=True
+        )
+    )
     trading_goal: Optional[str] = None
     experience_level: Optional[str] = Field(default=None, max_length=50)
     

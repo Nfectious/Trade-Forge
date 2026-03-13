@@ -1,6 +1,8 @@
-import axios from 'axios';
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import api from '@/lib/api';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 
@@ -20,7 +22,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('JWT')) {
+    if (localStorage.getItem('access_token')) {
       router.push('/dashboard');
     }
   }, [router]);
@@ -30,7 +32,7 @@ const Register = () => {
     try {
       registerSchema.parse({ username, email, password });
       setLoading(true);
-      const response = await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/register', { username, email, password });
+      const response = await api.post('/auth/register', { username, email, password });
       router.push('/login');
     } catch (err) {
       setError(err.errors?.[0]?.message || err.message);
@@ -49,7 +51,7 @@ const Register = () => {
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
             required
-            className="block w-full p-2 mt-2 border-gray-400 focus:border-blue-600 dark:focus:border-blue-700 focus:ring-blue-500 dark:focus:ring-blue-700"
+            className="block w-full p-2 mt-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-blue-500 dark:focus:ring-blue-700 focus:outline-none"
           />
           <input
             type="email"
@@ -57,7 +59,7 @@ const Register = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             required
-            className="block w-full p-2 mt-2 border-gray-400 focus:border-blue-600 dark:focus:border-blue-700 focus:ring-blue-500 dark:focus:ring-blue-700"
+            className="block w-full p-2 mt-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-blue-500 dark:focus:ring-blue-700 focus:outline-none"
           />
           <div className="relative mt-2">
             <input
@@ -66,7 +68,7 @@ const Register = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
-              className="block w-full p-2 pr-10 border-gray-400 focus:border-blue-600 dark:focus:border-blue-700 focus:ring-blue-500 dark:focus:ring-blue-700"
+              className="block w-full p-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-blue-500 dark:focus:ring-blue-700 focus:outline-none"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}

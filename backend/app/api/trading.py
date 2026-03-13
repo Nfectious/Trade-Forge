@@ -6,7 +6,7 @@ Portfolio viewing, order placement, and trade history.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from datetime import datetime, UTC
+from datetime import datetime
 from decimal import Decimal
 import json
 import logging
@@ -26,11 +26,26 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Starting balance per tier (in cents, matching tier_definitions seed data)
+TIER_STARTING_BALANCES = {
+    "free":     1_000_000,   # $10,000
+    "pro":      2_500_000,   # $25,000
+    "elite":   10_000_000,   # $100,000
+    "valkyrie": 50_000_000,  # $500,000
+}
+
 # Fallback prices when Redis is unavailable
 FALLBACK_PRICES = {
     "BTCUSDT": Decimal("65000.00"),
     "ETHUSDT": Decimal("3200.00"),
     "SOLUSDT": Decimal("180.00"),
+    "ADAUSDT": Decimal("0.45"),
+    "DOTUSDT": Decimal("7.50"),
+    "AVAXUSDT": Decimal("35.00"),
+    "LINKUSDT": Decimal("15.00"),
+    "DOGEUSDT": Decimal("0.08"),
+    "XRPUSDT": Decimal("0.55"),
+    "BNBUSDT": Decimal("580.00"),
 }
 
 
@@ -76,7 +91,7 @@ async def get_portfolio(
             "cash_balance": 0,
             "assets": [],
             "total_value": 0,
-            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.utcnow().isoformat(),
         }
 
     # Get holdings joined with trading pair for symbol
@@ -114,10 +129,15 @@ async def get_portfolio(
     cash_usd = Decimal(str(portfolio.cash_balance)) / Decimal("100")
     total_value = cash_usd + holdings_value
 
+    # Derive starting balance from user's tier
+    tier_key = current_user.tier.value if hasattr(current_user.tier, "value") else str(current_user.tier)
+    starting_balance_usd = TIER_STARTING_BALANCES.get(tier_key, 1_000_000) / 100
+
     return {
         "cash_balance": float(cash_usd),
         "assets": assets,
         "total_value": float(total_value),
+        "starting_balance": starting_balance_usd,
         "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None,
     }
 
@@ -241,7 +261,7 @@ async def place_order(
         filled_quantity=float(quantity),
         filled_avg_price=float(executed_price),
         total_cost=total_cost_cents,
-        filled_at=datetime.now(UTC),
+        filled_at=datetime.utcnow(),
     )
     session.add(order_record)
     await session.flush()
@@ -255,7 +275,7 @@ async def place_order(
         quantity=float(quantity),
         price=float(executed_price),
         total_value=total_cost_cents,
-        executed_at=datetime.now(UTC),
+        executed_at=datetime.utcnow(),
     )
     session.add(trade)
 

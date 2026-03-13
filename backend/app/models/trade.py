@@ -3,7 +3,8 @@ Trading models: TradingPair, Order, Trade
 Maps to: trading_pairs, orders, trades tables in init.sql
 """
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Column
+from sqlalchemy import Enum as SAEnum
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -70,9 +71,25 @@ class Order(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id")
     trading_pair_id: UUID = Field(foreign_key="trading_pairs.id")
 
-    order_type: str = Field(max_length=20)
-    side: str = Field(max_length=10)
-    status: str = Field(default="pending", max_length=20)
+    order_type: str = Field(
+        sa_column=Column(
+            SAEnum("market", "limit", "stop_loss", "take_profit",
+                   name="order_type", create_constraint=False, native_enum=True)
+        )
+    )
+    side: str = Field(
+        sa_column=Column(
+            SAEnum("buy", "sell", name="order_side", create_constraint=False, native_enum=True)
+        )
+    )
+    status: str = Field(
+        default="pending",
+        sa_column=Column(
+            SAEnum("pending", "filled", "cancelled", "rejected",
+                   name="order_status", create_constraint=False, native_enum=True),
+            server_default="pending",
+        )
+    )
 
     quantity: float
     price: Optional[float] = None
@@ -103,7 +120,11 @@ class Trade(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id")
     trading_pair_id: UUID = Field(foreign_key="trading_pairs.id")
 
-    side: str = Field(max_length=10)
+    side: str = Field(
+        sa_column=Column(
+            SAEnum("buy", "sell", name="order_side", create_constraint=False, native_enum=True)
+        )
+    )
     quantity: float
     price: float
     total_value: int  # BIGINT (cents)
